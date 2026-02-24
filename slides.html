@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SlackFirst Golden Demo Wrap-Up</title>
+  <style>
+    /* === PRESET: corporate-blue === */
+    @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Source+Sans+3:wght@400;600&display=swap');
+    :root {
+      --bg:           #0a1628;
+      --surface:      #112040;
+      --fg:           #e8eef7;
+      --fg-muted:     #94a3b8;
+      --accent:       #f59e0b;
+      --font-heading: 'Merriweather', Georgia, serif;
+      --font-body:    'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+      --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+      --code-bg:      #0d1f3c;
+      --code-fg:      #cbd5e1;
+    }
+
+    /* === CORE SLIDE ENGINE === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #progress {
+      position: fixed;
+      top: 0; left: 0;
+      height: 3px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+      z-index: 100;
+    }
+
+    #deck {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 3.5rem 6rem;
+      opacity: 0;
+      transform: translateX(60px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+      pointer-events: none;
+    }
+    .slide.active  { opacity: 1; transform: translateX(0); pointer-events: auto; }
+    .slide.exit    { opacity: 0; transform: translateX(-60px); }
+    .slide.top     { justify-content: flex-start; padding-top: 3.5rem; }
+
+    h1 { font-family: var(--font-heading); font-size: clamp(2rem, 4.5vw, 3.2rem); color: var(--accent); line-height: 1.15; text-align: center; }
+    h2 { font-family: var(--font-heading); font-size: clamp(1.4rem, 3vw, 2.2rem); color: var(--accent); margin-bottom: 1.4rem; }
+    h3 { font-size: clamp(0.95rem, 1.8vw, 1.2rem); color: var(--fg-muted); margin-bottom: 0.5rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    p, li { font-size: clamp(0.9rem, 1.6vw, 1.15rem); line-height: 1.7; max-width: 72ch; }
+    ul, ol { padding-left: 1.4rem; width: 100%; }
+    li { margin-bottom: 0.55rem; }
+    li::marker { color: var(--accent); }
+
+    .subtitle { font-size: clamp(1rem, 1.8vw, 1.3rem); color: var(--fg-muted); margin-top: 1rem; text-align: center; }
+    .meta     { font-size: 0.95rem; color: var(--fg-muted); margin-top: 2rem; text-align: center; }
+
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; width: 100%; }
+    .cols-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; width: 100%; }
+
+    .callout {
+      background: var(--surface);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 0.85rem 1.25rem;
+      margin: 0.6rem 0;
+      width: 100%;
+    }
+    .callout p { font-size: clamp(0.8rem, 1.3vw, 1rem); font-style: italic; color: var(--fg-muted); }
+    .callout p strong { color: var(--fg); font-style: normal; }
+
+    .card {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      border-top: 3px solid var(--accent);
+    }
+    .card h3 { color: var(--accent); margin-bottom: 0.6rem; text-transform: none; letter-spacing: 0; }
+
+    .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #0a1628;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .big-stat {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-family: var(--font-heading);
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .tag {
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 0.8rem;
+      padding: 0.2rem 0.75rem;
+      border-radius: 999px;
+    }
+
+    .check-list li { list-style: none; padding-left: 0; }
+    .check-list li::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+    .x-list li { list-style: none; padding-left: 0; }
+    .x-list li::before { content: "✕ "; color: #f87171; font-weight: 700; }
+
+    .notes {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(0,0,0,0.85);
+      color: #eee;
+      padding: 0.9rem 2rem;
+      font-size: 0.88rem;
+      line-height: 1.5;
+      max-height: 22vh;
+      overflow-y: auto;
+    }
+    body.show-notes .notes { display: block; }
+
+    #nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      padding: 0.65rem;
+      background: var(--surface);
+      font-size: 0.82rem;
+      color: var(--fg-muted);
+    }
+    #nav button {
+      background: var(--accent);
+      color: #0a1628;
+      border: none;
+      border-radius: 6px;
+      padding: 0.35rem 0.9rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-family: inherit;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    #nav button:disabled { opacity: 0.3; cursor: default; }
+    #nav button:not(:disabled):hover { opacity: 0.8; }
+
+    /* slide-number chip */
+    .slide-num {
+      position: absolute;
+      bottom: 1.2rem;
+      right: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--fg-muted);
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div id="progress"></div>
+  <div id="deck">
+
+    <!-- ═══ SLIDE 1 — Title ═══ -->
+    <section class="slide active" id="s1">
+      <div class="badge">Internal · Oct–Nov 2025</div>
+      <h1>SlackFirst Golden Demo</h1>
+      <p class="subtitle">Wrap-Up &amp; Learnings — Dreamforce 2026 Vision</p>
+      <p class="meta">Salesforce Slack Design &amp; Cross-Cloud Teams</p>
+      <div class="tag-row" style="justify-content:center; margin-top:1.5rem;">
+        <span class="tag">Sales Cloud</span>
+        <span class="tag">Marketing Cloud</span>
+        <span class="tag">Service Cloud</span>
+        <span class="tag">AgentForce</span>
+        <span class="tag">Agentic OS</span>
+      </div>
+      <aside class="notes">Welcome. This deck recaps the SlackFirst Golden Demo — a forward-looking prototype envisioning Dreamforce 2026. Safe harbor: nothing here is on the product roadmap (yet).</aside>
+      <span class="slide-num">1</span>
+    </section>
+
+    <!-- ═══ SLIDE 2 — What Is It ═══ -->
+    <section class="slide" id="s2">
+      <h2>What Is the Golden Demo?</h2>
+      <div class="cols">
+        <div>
+          <h3>Origin</h3>
+          <p>Requested directly by <strong>Marc Benioff</strong> after seeing three separate SlackFirst demos at the Hawaii offsite. He wanted a single unified vision projecting <strong>12–18 months ahead</strong> to Dreamforce 2026.</p>
+        </div>
+        <div>
+          <h3>The Vision</h3>
+          <p><strong>Slack as the Agentic OS for the enterprise</strong> — AgentForce, Slack, and third-party agents connected in a single cross-cloud story, all rooted in user research.</p>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:1.5rem;">
+        <p><strong>Safe harbor:</strong> This is an exploratory prototype. Nothing featured is on the product roadmap (yet) or representative of final UI.</p>
+      </div>
+      <aside class="notes">The demo is not a commitment or replacement for existing Golden Demos from Solutions CoE. It's a visionary prototype.</aside>
+      <span class="slide-num">2</span>
+    </section>
+
+    <!-- ═══ SLIDE 3 — Agenda ═══ -->
+    <section class="slide" id="s3">
+      <h2>Today's Agenda</h2>
+      <div class="cols-3">
+        <div class="card">
+          <h3>Part 1 · By Cloud</h3>
+          <ul>
+            <li>SlackFirst Sales</li>
+            <li>SlackFirst Marketing</li>
+            <li>SlackFirst Service</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Part 2 · Capabilities</h3>
+          <ul>
+            <li>Platform primitives</li>
+            <li>Agentic OS big rocks</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Part 3 · Process</h3>
+          <ul>
+            <li>Research &amp; learnings</li>
+            <li>What's next</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">Three main sections: the cloud vignettes, the platform capabilities that span them, and the research process that informed everything.</aside>
+      <span class="slide-num">3</span>
+    </section>
+
+    <!-- ═══ SLIDE 4 — Sales Overview ═══ -->
+    <section class="slide top" id="s4">
+      <div class="badge">Sales Cloud</div>
+      <h2>SlackFirst Sales</h2>
+      <p style="margin-bottom:1.2rem;">Follow an Account Executive working a deal to close — using AI to automate updates, gathering quotes, getting approvals, and turning meetings into action.</p>
+      <div class="cols">
+        <div>
+          <h3>Key Capabilities</h3>
+          <ul>
+            <li>Slack Voice Mode for seamless communication</li>
+            <li>Rich agent interactions &amp; recommendations</li>
+            <li>Ambient Intelligence + meeting recaps</li>
+            <li>Approvals with AI context</li>
+            <li>Tableau metrics integration</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Core Insight</h3>
+          <div class="callout">
+            <p>"Speed is everything for sellers. The more we smartly automate — updating Salesforce, gathering quotes, getting approvals — the more they can focus on <strong>closing</strong>."</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">Sales vignette: an AE using cutting-edge AI throughout a deal cycle. Meetings are a key workflow — prep, during, and post-meeting follow-up.</aside>
+      <span class="slide-num">4</span>
+    </section>
+
+    <!-- ═══ SLIDE 5 — Sales Quotes ═══ -->
+    <section class="slide top" id="s5">
+      <div class="badge">Sales Cloud · Research Voices</div>
+      <h2>What Sellers Actually Need</h2>
+      <div class="callout">
+        <p>"One of my biggest gripes is updating Salesforce hygiene. In a perfect world: <strong>'Push all opportunities with close dates in the next 7 days out by two weeks.'</strong> That would be the biggest use case."</p>
+      </div>
+      <div class="callout">
+        <p>"Can it create the opportunity Slack channel and pull the meeting together? <strong>Otherwise it's 20 min of finding time on people's calendars.</strong>"</p>
+      </div>
+      <div class="callout">
+        <p>"A meeting can have 10–12 different tasks... <strong>it doesn't trigger actions or next steps.</strong> [This AI solution] would make the process more agile for the whole team."</p>
+      </div>
+      <aside class="notes">Direct user research quotes from Sales interviews. Key themes: bulk CRM updates, post-meeting automation, reducing calendar friction.</aside>
+      <span class="slide-num">5</span>
+    </section>
+
+    <!-- ═══ SLIDE 6 — Marketing Overview ═══ -->
+    <section class="slide top" id="s6">
+      <div class="badge">Marketing Cloud</div>
+      <h2>SlackFirst Marketing</h2>
+      <p style="margin-bottom:1.2rem;">Follow a marketing manager through campaign brief creation and launch — eliminating scattered knowledge, misaligned stakeholders, and siloed data.</p>
+      <div class="cols">
+        <div>
+          <h3>Key Capabilities</h3>
+          <ul>
+            <li>Agentic Deep Research for market insights</li>
+            <li>Agentic Campaign Creation with AI</li>
+            <li>Integrated Analytics in Slack workflows</li>
+            <li>Seamless Handoff to Salesforce</li>
+            <li>Multi-player Agent Experience</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Core Insight</h3>
+          <div class="callout">
+            <p>"Updating all the different documents, spreadsheets, trackers — everybody has to review that, and then there are <strong>500 variations.</strong> It's just a lot of tactical work."</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">Marketing vignette updated based on feedback from real marketing user research sessions. Two workflows: campaign brief creation and campaign launch.</aside>
+      <span class="slide-num">6</span>
+    </section>
+
+    <!-- ═══ SLIDE 7 — Marketing Quotes ═══ -->
+    <section class="slide top" id="s7">
+      <div class="badge">Marketing Cloud · Research Voices</div>
+      <h2>What Marketers Actually Need</h2>
+      <div class="callout">
+        <p>"The things that take up the most time are <strong>creating the brief and getting approvals.</strong>"</p>
+      </div>
+      <div class="callout">
+        <p>"If there's a way that it's not just a screenshot — and there was an easy way to prompt Slack to <strong>go pull something from Tableau and put it in the chat</strong> so we could both reference it, that'd be cool."</p>
+      </div>
+      <div class="callout">
+        <p>"I want to see how many customers received a specific campaign... <strong>it's hard to keep track and I wish the data was more self-serve.</strong>"</p>
+      </div>
+      <aside class="notes">Direct user quotes from Marketing research. Themes: reducing brief/approval friction, embedded Tableau data, audience-aware AI.</aside>
+      <span class="slide-num">7</span>
+    </section>
+
+    <!-- ═══ SLIDE 8 — Service Overview ═══ -->
+    <section class="slide top" id="s8">
+      <div class="badge">Service Cloud</div>
+      <h2>SlackFirst Service</h2>
+      <p style="margin-bottom:1.2rem;">Follow a Service Rep through a customer call — starting a swarm, finding experts, and resolving a case while supervisors monitor service quality in real time.</p>
+      <div class="cols">
+        <div>
+          <h3>Key Capabilities</h3>
+          <ul>
+            <li>Ask Anything for instant information access</li>
+            <li>Ambient Intelligence during customer calls</li>
+            <li>In-swarm Expert Finder</li>
+            <li>Service Supervisor workflow integration</li>
+            <li>Agentic knowledge updates</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Core Insight</h3>
+          <div class="callout">
+            <p>"There's a lot of noise in escalation channels. Just summarizing quickly — <strong>'here were 3 incidents, here's what you need to know'</strong> — while cutting out all the back and forth."</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">Service vignette: rep + supervisor experience. Critical challenge is triage speed and surfacing the right experts and knowledge in real time.</aside>
+      <span class="slide-num">8</span>
+    </section>
+
+    <!-- ═══ SLIDE 9 — Service Quotes ═══ -->
+    <section class="slide top" id="s9">
+      <div class="badge">Service Cloud · Research Voices</div>
+      <h2>What Service Teams Actually Need</h2>
+      <div class="callout">
+        <p>"If [during a call, AI] is able to pull from a knowledge base... someone's asking about shipping time frames and <strong>it's just not on the top of your head</strong>. It would be nice to have something pull that in."</p>
+      </div>
+      <div class="callout">
+        <p>"That's always a struggle — making sure things are moving along and that someone <strong>didn't miss something, or that a lot of attention is being given to something low-priority.</strong>"</p>
+      </div>
+      <div class="callout">
+        <p>"'Why did this number drop?' — <strong>Getting that answer quickly is usually very important.</strong>"</p>
+      </div>
+      <aside class="notes">Key themes: real-time knowledge retrieval, escalation noise reduction, supervisor visibility into case prioritization.</aside>
+      <span class="slide-num">9</span>
+    </section>
+
+    <!-- ═══ SLIDE 10 — Platform Primitives ═══ -->
+    <section class="slide top" id="s10">
+      <h2>Platform Capabilities &amp; Primitives</h2>
+      <p style="margin-bottom:1.2rem; color: var(--fg-muted);">Native Slack capabilities woven throughout all three cloud vignettes</p>
+      <div class="cols">
+        <div>
+          <h3>Starting Now</h3>
+          <ul>
+            <li><strong>Today View</strong> — Focused place to start your day</li>
+            <li><strong>Task Management</strong> — Central agent/task/to-do hub</li>
+            <li><strong>Approvals</strong> — Salesforce notifications &amp; workflow</li>
+            <li><strong>Email</strong> — Downmarket composition</li>
+            <li><strong>Meetings + Calendar</strong> — Slack ↔ Salesforce sync</li>
+            <li><strong>Rich Agentic Interactivity</strong> — CRM updates &amp; record creation</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Agentic OS Big Rocks</h3>
+          <ul>
+            <li><strong>Agent Orchestration</strong> — Single interface for multiple AI agents</li>
+            <li><strong>Ambient Intelligence</strong> — Real-time listening, transcription, action items</li>
+            <li><strong>Agent &amp; AppExchange</strong> — Marketplace for agents &amp; workflows</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">These primitives are the building blocks that clouds use to solve their specific problems. Platform teams can leverage these as foundational capabilities.</aside>
+      <span class="slide-num">10</span>
+    </section>
+
+    <!-- ═══ SLIDE 11 — Research Learnings ═══ -->
+    <section class="slide top" id="s11">
+      <h2>Broad Research Themes &amp; Learnings</h2>
+      <ul style="width:100%;">
+        <li><strong>Lean into SlackFirst advantages.</strong> Deep context, everything in one place, immediate action — these are Slack's native strengths.</li>
+        <li><strong>Think holistically about use cases.</strong> Meetings are high-leverage: solve before, during, and after. Seamless end-to-end solves the "work of work."</li>
+        <li><strong>Ambient AI felt novel.</strong> Make behavior configurable — show when AI is listening, allow hiding when screen-sharing with customers.</li>
+        <li><strong>Build trust over time.</strong> Users are skeptical from prior AI experiences. Start with humans in the loop; give tools for feedback and configuration.</li>
+        <li><strong>Noise &amp; channel sprawl reduce Slack's value.</strong> Be thoughtful about when channels/notifications are created — smartly archive when appropriate.</li>
+      </ul>
+      <aside class="notes">These themes emerged from Dreamforce research intercepts, two waves of interviews across Sales/Marketing/Service, and Engine customer feedback.</aside>
+      <span class="slide-num">11</span>
+    </section>
+
+    <!-- ═══ SLIDE 12 — What Is / Is Not ═══ -->
+    <section class="slide" id="s12">
+      <h2>What the Golden Demo Is (and Isn't)</h2>
+      <div class="cols">
+        <div>
+          <h3 style="color: #4ade80; text-transform:none; letter-spacing:0; margin-bottom:0.75rem;">What It Is ✓</h3>
+          <ul class="check-list">
+            <li>Forward-looking Figma prototype for DF2026</li>
+            <li>Conversational, agentic-first, AI-powered</li>
+            <li>AgentForce + Slack + 3rd-party agents cross-cloud</li>
+            <li>Slack as the Agentic OS — three distinct vignettes</li>
+            <li>Rooted in real user research</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="color: #f87171; text-transform:none; letter-spacing:0; margin-bottom:0.75rem;">What It's Not ✕</h3>
+          <ul class="x-list">
+            <li>Not a locked commitment or product roadmap</li>
+            <li>Not replacing Solutions CoE Golden Demos</li>
+            <li>Not focused on complex document creation</li>
+            <li>Not just product walkthroughs</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">Important framing for internal audiences — especially for T&P and Sales who may conflate this with roadmap commitments.</aside>
+      <span class="slide-num">12</span>
+    </section>
+
+    <!-- ═══ SLIDE 13 — What's Next ═══ -->
+    <section class="slide" id="s13">
+      <h2>What's Next</h2>
+      <div class="cols">
+        <div>
+          <h3>Socializing with Salesforce</h3>
+          <ul>
+            <li>Service Cloud integration for contact centers</li>
+            <li>ITSM evolution within Slack</li>
+            <li>Cloud-specific SlackFirst app vision consultations</li>
+            <li>V2MOM development for joint SlackFirst FY27 program</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Get Involved</h3>
+          <ul>
+            <li><strong>#temp-slack-first-golden-demo</strong> — Primary channel</li>
+            <li><strong>#golden-demo-research-sessions</strong> — Research</li>
+            <li>Golden Demo Dream Team doc for stakeholders</li>
+          </ul>
+          <div class="callout" style="margin-top:1rem;">
+            <p>Questions? Reach out in the project channels or connect with the <strong>Slack Design &amp; Cross-Cloud teams</strong> directly.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">Next steps are focused on socializing the vision with individual clouds and developing FY27 joint planning.</aside>
+      <span class="slide-num">13</span>
+    </section>
+
+    <!-- ═══ SLIDE 14 — Closing ═══ -->
+    <section class="slide" id="s14">
+      <h1>Thank You</h1>
+      <p class="subtitle">Slack as the Agentic OS for the Enterprise</p>
+      <div class="tag-row" style="justify-content:center; margin-top:2rem;">
+        <span class="tag">Sales Cloud</span>
+        <span class="tag">Marketing Cloud</span>
+        <span class="tag">Service Cloud</span>
+        <span class="tag">Data Cloud</span>
+        <span class="tag">AgentForce</span>
+        <span class="tag">Tableau</span>
+      </div>
+      <p class="meta" style="margin-top:2rem;">Questions &amp; Discussion</p>
+      <aside class="notes">Open Q&A. Remind the audience: safe harbor — this is a forward-looking vision, not a commitment.</aside>
+      <span class="slide-num">14</span>
+    </section>
+
+  </div>
+
+  <nav id="nav">
+    <button id="btn-prev" disabled>← Prev</button>
+    <span id="counter">1 / 14</span>
+    <button id="btn-next">Next →</button>
+  </nav>
+
+  <script>
+    (function () {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const progress = document.getElementById('progress');
+      const counter  = document.getElementById('counter');
+      const btnPrev  = document.getElementById('btn-prev');
+      const btnNext  = document.getElementById('btn-next');
+      let current = 0;
+
+      if (new URLSearchParams(location.search).get('notes') === '1') {
+        document.body.classList.add('show-notes');
+      }
+
+      function goTo(idx) {
+        if (idx < 0 || idx >= slides.length) return;
+        slides[current].classList.remove('active');
+        slides[current].classList.add('exit');
+        const prev = current;
+        current = idx;
+        setTimeout(() => slides[prev].classList.remove('exit'), 450);
+        slides[current].classList.add('active');
+        slides[current].classList.remove('exit');
+        counter.textContent = `${current + 1} / ${slides.length}`;
+        btnPrev.disabled = current === 0;
+        btnNext.disabled = current === slides.length - 1;
+        progress.style.width = slides.length > 1
+          ? ((current / (slides.length - 1)) * 100).toFixed(1) + '%'
+          : '100%';
+      }
+
+      btnPrev.addEventListener('click', () => goTo(current - 1));
+      btnNext.addEventListener('click', () => goTo(current + 1));
+
+      document.addEventListener('keydown', e => {
+        if (['ArrowRight', 'ArrowDown', ' '].includes(e.key)) { e.preventDefault(); goTo(current + 1); }
+        if (['ArrowLeft',  'ArrowUp'       ].includes(e.key)) { e.preventDefault(); goTo(current - 1); }
+        if (e.key === 'Home') goTo(0);
+        if (e.key === 'End')  goTo(slides.length - 1);
+      });
+
+      let touchX = null;
+      document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+      document.addEventListener('touchend',   e => {
+        if (touchX === null) return;
+        const dx = e.changedTouches[0].clientX - touchX;
+        if (Math.abs(dx) > 50) goTo(current + (dx < 0 ? 1 : -1));
+        touchX = null;
+      });
+
+      goTo(0);
+    })();
+  </script>
+</body>
+</html>
